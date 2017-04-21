@@ -1,3 +1,3 @@
 # vm-controller
 
-Allows to control virtual box from code
+Allows to control vagrant from code
