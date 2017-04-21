@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2017, Michael Sonst, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+group = 'de.sonsts'
+version = '1.000.00.SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+	main {
+		java {
+			srcDir 'src/main/java'
+			srcDir 'src/generated/java'
+			srcDir 'src/test/java'
+		}
+		resources {
+			srcDir 'src/main/resources'
+			srcDir 'src/test/resources'
+		}
+	}
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "net.researchgate:gradle-release:2.0.2"
+    }
+}
+    
+
+    
+dependencies {
+	compile "log4j:log4j:1.2.17"
+    
+    compile 'net.java.dev.jna:jna:4.2.0'
+    compile 'net.java.dev.jna:jna-platform:4.2.0'
+    compile 'net.java.dev.jna:platform:3.5.2'
+    
+    compile 'io.vertx:vertx-core:3.0.0'
+    compile 'io.vertx:vertx-hazelcast:3.3.3'
+    
+	//compile 'org.virtualbox:vboxjws:4.2.8'
+	 
+	testCompile 'junit:junit:4.12'
+    testCompile 'org.mockito:mockito-core:1.9.5'
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    
+     /*repositories {
+                maven {
+                        url "$buildDir/repo"
+                }
+        }*/
+}
+
+/*uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: repositoryUrl) {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      snapshotRepository(url: snapshotRepositoryUrl) {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+      pom.project {
+        name projectBaseName
+        packaging projectPackaging
+        // optionally artifactId can be defined here 
+        description projectDescription
+        url projectUrl
+
+        scm {
+          connection scmConnection
+          developerConnection scmDeveloperConnection
+          url scmUrl
+        }
+
+        licenses {
+          license {
+            name licenseName
+            url licenseUrl
+          }
+        }
+
+        developers {
+          developer {
+            id developerId
+            name developerName
+            email developerEmail
+          }
+        }
+      }
+    }
+  }
+}*/
