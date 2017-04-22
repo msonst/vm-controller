@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import de.sonsts.common.RunState;
 import de.sonsts.vm.controller.process.ISuccessChecker;
 import de.sonsts.vm.controller.process.ProcessStatus;
 import de.sonsts.vm.controller.process.impl.OutputReader;
