@@ -14,20 +14,30 @@
  * limitations under the License.
  */
  
+/*
+ * Requires ossrhUsername and ossrhPassword to be set either in 
+ * ~/.gradle/gradle.properties or to be passed via commandline 
+ * gradlew publish -PossrhUsername=<SonartypeUsername> -PossrhPassword=<SonartypePassword>
+ */
+ 
 apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 group = 'de.sonsts'
-version = '1.000.00.SNAPSHOT'
+version = '1.000.00-SNAPSHOT'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 
 repositories {
-	mavenLocal()
     mavenCentral()
+    
+   maven {
+    // Download snapshot, release and staged artifacts from staging group
+    url "https://oss.sonatype.org/content/groups/staging"
+  }
 }
 
 sourceSets {
@@ -86,58 +96,96 @@ signing {
 publishing {
     publications {
         mavenJava(MavenPublication) {
+            customizePom(pom, rootProject)
             from components.java
+
+            artifact sourcesJar
+            artifact javadocJar
+
+            // sign the pom
+            pom.withXml {
+                def pomFile = file("${project.buildDir}/generated-pom.xml")
+                writeTo(pomFile)
+                def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+                artifact(pomAscFile) {
+                    classifier = null
+                    extension = 'pom.asc'
+                }
+                pomFile.delete()
+            }
+
+            // sign the artifacts
+            project.tasks.signArchives.signatureFiles.each {
+                artifact(it) {
+                    def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
+                    if (matcher.find()) {
+                        classifier = matcher.group(1)
+                    } else {
+                        classifier = null
+                    }
+                    extension = 'jar.asc'
+                }
+            }
         }
     }
-    
-     /*repositories {
-                maven {
-                        url "$buildDir/repo"
-                }
-        }*/
+    repositories {
+        maven {
+            
+               if(project.version.endsWith('-SNAPSHOT')) {
+                url "https://oss.sonatype.org/content/repositories/snapshots/"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            }
+            
+            credentials {
+                username ossrhUsername
+                password ossrhPassword
+            }
+        }
+    }
 }
 
-/*uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+def customizePom(pom, gradleProject) {
+    pom.withXml {
+        def root = asNode()
 
-      repository(url: repositoryUrl) {
-        authentication(userName: ossrhUsername, password: ossrhPassword)
-      }
-
-      snapshotRepository(url: snapshotRepositoryUrl) {
-        authentication(userName: ossrhUsername, password: ossrhPassword)
-      }
-
-      pom.project {
-        name projectBaseName
-        packaging projectPackaging
-        // optionally artifactId can be defined here 
-        description projectDescription
-        url projectUrl
-
-        scm {
-          connection scmConnection
-          developerConnection scmDeveloperConnection
-          url scmUrl
+        // eliminate test-scoped dependencies (no need in maven central POMs)
+        root.dependencies.removeAll { dep ->
+            dep.scope == "test"
         }
 
-        licenses {
-          license {
-            name licenseName
-            url licenseUrl
-          }
-        }
+        // add all items necessary for maven central publication
+        root.children().last() + {
+            resolveStrategy = Closure.DELEGATE_FIRST
 
-        developers {
-          developer {
-            id developerId
-            name developerName
-            email developerEmail
-          }
+            description gradleProject.description
+            name 'VM controller code'
+            url 'https://github.com/msonst/vm-controller'
+
+            issueManagement {
+                system 'GitHub'
+                url 'https://github.com/msonst/vm-controller/issues'
+            }
+            
+            licenses {
+                license {
+                    name 'Apache License 2.0'
+                    url 'https://github.com/msonst/vm-controller/blob/master/LICENSE'
+                    distribution 'repo'
+                }
+            }
+            scm {
+                url 'https://github.com/msonst/vm-controller'
+                connection 'scm:git:git@github.com:msonst/vm-controller.git'
+                developerConnection 'scm:git:ssh://git@github.com:msonst/vm-controller.git'
+            }
+            developers {
+                developer {
+                    id 'msonst'
+                    name 'Michael Sonst'
+                    email 'codedorado@gmail.com'
+                }
+            }
         }
-      }
     }
-  }
-}*/
+}
